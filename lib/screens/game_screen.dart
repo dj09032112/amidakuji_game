@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/game_state.dart';
+import '../models/board_state.dart';
+import '../models/ball_state.dart';
+import '../models/game_controller.dart';
+import '../models/game_enums.dart';
 import '../widgets/game_board.dart';
 import '../widgets/tool_panel.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/locale_provider.dart';
 
 class GameScreen extends StatefulWidget {
   final double cellSize;
 
-  const GameScreen({Key? key, this.cellSize = 50.0}) : super(key: key);
+  const GameScreen({
+    Key? key, 
+    this.cellSize = 50.0, 
+  }) : super(key: key);
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -16,18 +24,23 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
-    final gameState = Provider.of<GameState>(context);
+    final ballState = Provider.of<BallState>(context);
+    final gameController = Provider.of<GameController>(context, listen: false);
+    final localizations = AppLocalizations.of(context);
+    if (localizations == null) return const SizedBox.shrink();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('爬梯子遊戲'),
+        title: Text(localizations.appTitle),
         actions: [
+          // 語言切換下拉選單
+          _buildLanguageDropdown(context),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              gameState.resetGame();
+              gameController.resetGame();
             },
-            tooltip: '重置遊戲',
+            tooltip: localizations.resetGame,
           ),
         ],
       ),
@@ -55,18 +68,52 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       ),
     );
   }
+  
+  // 創建語言切換下拉選單
+  Widget _buildLanguageDropdown(BuildContext context) {
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final currentLocale = localeProvider.locale;
+    
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: DropdownButton<Locale>(
+        value: currentLocale,
+        onChanged: (Locale? newLocale) {
+          if (newLocale != null) {
+            localeProvider.setLocale(context, newLocale);
+          }
+        },
+        items: AppLocalizations.supportedLocales.map((Locale locale) {
+          String languageText = '';
+          if (locale.languageCode == 'zh') {
+            languageText = '中文';
+          } else if (locale.languageCode == 'en') {
+            languageText = 'English';
+          }
+          
+          return DropdownMenuItem<Locale>(
+            value: locale,
+            child: Text(languageText),
+          );
+        }).toList(),
+        underline: Container(), // 隱藏下劃線
+        icon: const Icon(Icons.language, color: Colors.white),
+      ),
+    );
+  }
 
   // 創建固定高度的結果顯示區域
   Widget _buildResultDisplay(BuildContext context) {
-    final gameState = Provider.of<GameState>(context);
+    final ballState = Provider.of<BallState>(context);
+    final localizations = AppLocalizations.of(context)!;
     
-    String successText = gameState.gameMode == GameMode.singleMatch 
-      ? '恭喜！小球成功到達終點！' 
-      : '恭喜！所有小球都正確到達終點！';
+    String successText = ballState.gameMode == GameMode.singleMatch 
+      ? localizations.singleBallSuccess 
+      : localizations.multiBallSuccess;
     
-    String failureText = gameState.gameMode == GameMode.singleMatch 
-      ? '可惜！小球沒有到達指定終點！' 
-      : '可惜！不是所有小球都到達正確終點！';
+    String failureText = ballState.gameMode == GameMode.singleMatch 
+      ? localizations.singleBallFailure 
+      : localizations.multiBallFailure;
     
     // 固定高度的容器，即使沒有內容也保持空間
     return Container(
@@ -75,7 +122,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
-        child: gameState.status == GameStatus.success 
+        child: ballState.status == GameStatus.success 
           ? Text(
               successText,
               key: const ValueKey('success'),
@@ -85,7 +132,7 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 color: Colors.green,
               ),
             )
-          : gameState.status == GameStatus.failure
+          : ballState.status == GameStatus.failure
             ? Text(
                 failureText,
                 key: const ValueKey('failure'),
@@ -111,7 +158,10 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildControlPanel(BuildContext context) {
-    final gameState = Provider.of<GameState>(context);
+    final ballState = Provider.of<BallState>(context);
+    final boardState = Provider.of<BoardState>(context, listen: false);
+    final gameController = Provider.of<GameController>(context, listen: false);
+    final localizations = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
@@ -131,24 +181,19 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             width: 200.0,
             height: 45.0,
             child: ElevatedButton(
-              onPressed: gameState.status == GameStatus.ready
+              onPressed: ballState.status == GameStatus.ready
                   ? () {
-                      gameState.startGame();
-                      // 啟動小球動畫
-                      gameState.simulateBallMovement(
-                        vsync: this,
-                        cellSize: widget.cellSize,
-                      );
+                      gameController.startGame(this, widget.cellSize);
                     }
-                  : gameState.status == GameStatus.success || gameState.status == GameStatus.failure
+                  : ballState.status == GameStatus.success || ballState.status == GameStatus.failure
                       ? () {
-                          gameState.resetGame();
+                          gameController.resetGame();
                         }
                       : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: gameState.status == GameStatus.success
+                backgroundColor: ballState.status == GameStatus.success
                     ? Colors.green
-                    : gameState.status == GameStatus.failure
+                    : ballState.status == GameStatus.failure
                         ? Colors.red
                         : Colors.blue,
                 disabledBackgroundColor: Colors.grey,
@@ -157,11 +202,11 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                 ),
               ),
               child: Text(
-                gameState.status == GameStatus.ready
-                    ? '開始'
-                    : gameState.status == GameStatus.success || gameState.status == GameStatus.failure
-                        ? '新遊戲'
-                        : '進行中',
+                ballState.status == GameStatus.ready
+                    ? localizations.startGame
+                    : ballState.status == GameStatus.success || ballState.status == GameStatus.failure
+                        ? localizations.newGame
+                        : localizations.gameInProgress,
                 style: const TextStyle(
                   fontSize: 18.0,
                   fontWeight: FontWeight.bold,
@@ -173,9 +218,9 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           const SizedBox(height: 6.0),
           // 遊戲說明
           Text(
-            gameState.gameMode == GameMode.singleMatch
-              ? '提示：從工具箱中拖曳模塊到棋盤上，幫助小球從起點到達終點'
-              : '提示：從工具箱中拖曳模塊到棋盤上，幫助所有小球從各自起點到達對應終點',
+            ballState.gameMode == GameMode.singleMatch
+              ? localizations.singleBallHint
+              : localizations.multiBallHint,
             style: const TextStyle(
               fontSize: 11.0,
               color: Colors.grey,
@@ -189,29 +234,31 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   
   // 遊戲模式選擇器
   Widget _buildGameModeSelector(BuildContext context) {
-    final gameState = Provider.of<GameState>(context);
+    final ballState = Provider.of<BallState>(context);
+    final gameController = Provider.of<GameController>(context, listen: false);
+    final localizations = AppLocalizations.of(context)!;
     
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text('遊戲模式：', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(localizations.gameMode, style: const TextStyle(fontWeight: FontWeight.bold)),
         SegmentedButton<GameMode>(
-          segments: const [
+          segments: [
             ButtonSegment<GameMode>(
               value: GameMode.singleMatch,
-              label: Text('單球模式'),
-              icon: Icon(Icons.looks_one),
+              label: Text(localizations.singleBallMode),
+              icon: const Icon(Icons.looks_one),
             ),
             ButtonSegment<GameMode>(
               value: GameMode.multiMatch,
-              label: Text('多球模式'),
-              icon: Icon(Icons.filter_5),
+              label: Text(localizations.multiBallMode),
+              icon: const Icon(Icons.filter_5),
             ),
           ],
-          selected: {gameState.gameMode},
+          selected: {ballState.gameMode},
           onSelectionChanged: (Set<GameMode> selection) {
-            if (selection.first != gameState.gameMode) {
-              gameState.gameMode = selection.first;
+            if (selection.first != ballState.gameMode) {
+              gameController.setGameMode(selection.first);
             }
           },
         ),

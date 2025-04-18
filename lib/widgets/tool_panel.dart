@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_module.dart';
+import '../themes/app_theme.dart';
+import '../l10n/app_localizations.dart';
 import 'module_widget.dart';
 
 class ToolPanel extends StatelessWidget {
@@ -9,14 +11,17 @@ class ToolPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
+    if (localizations == null) return const SizedBox.shrink();
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+      padding: AppTheme.kToolboxPadding,
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8.0),
+        color: AppTheme.kToolboxBackground,
+        borderRadius: BorderRadius.circular(AppTheme.kToolboxCornerRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: AppTheme.kToolboxShadow,
             blurRadius: 4.0,
             offset: const Offset(0, 2),
           ),
@@ -26,24 +31,23 @@ class ToolPanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '模塊工具箱',
-            style: TextStyle(
-              fontSize: 15.0,
-              fontWeight: FontWeight.bold,
-            ),
+          Text(
+            localizations.toolboxTitle,
+            style: AppTheme.kToolboxTitleStyle,
           ),
-          const SizedBox(height: 8.0),
+          SizedBox(height: AppTheme.kToolboxSpacing),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildToolItem(
-                '橫線模塊',
+                context,
+                localizations.horizontalModule,
                 ModuleType.horizontal,
               ),
-              const SizedBox(width: 12.0),
+              SizedBox(width: AppTheme.kToolItemMargin),
               _buildToolItem(
-                '橋接模塊',
+                context,
+                localizations.bridgeModule,
                 ModuleType.bridge,
               ),
             ],
@@ -53,17 +57,17 @@ class ToolPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildToolItem(String label, ModuleType type) {
+  Widget _buildToolItem(BuildContext context, String label, ModuleType type) {
     return Column(
       children: [
         ModuleWidget.draggable(
           type: type,
           cellSize: cellSize,
         ),
-        const SizedBox(height: 4.0),
+        SizedBox(height: AppTheme.kToolItemSpacing),
         Text(
           label,
-          style: const TextStyle(fontSize: 12.0),
+          style: AppTheme.kToolboxLabelStyle,
         ),
       ],
     );

@@ -2,24 +2,16 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../utils/ball_animation.dart';
 import 'game_module.dart';
+import 'game_config.dart';
+import 'game_logic.dart';
 
-enum GameStatus {
-  ready, // 遊戲尚未開始
-  running, // 遊戲進行中
-  success, // 成功到達終點
-  failure, // 未到達指定終點
-}
-
-// 遊戲模式枚舉
-enum GameMode {
-  singleMatch, // 單起點對應單終點
-  multiMatch,  // 多起點對應多終點
-}
-
+/// 遊戲狀態類，只負責管理遊戲狀態
 class GameState with ChangeNotifier {
-  // 網格尺寸
-  final int columns = 5;
-  final int rows = 8;
+  // 遊戲配置
+  final GameConfig config;
+  
+  // 遊戲邏輯
+  final GameLogic logic;
   
   // 遊戲模式
   GameMode _gameMode = GameMode.singleMatch;
@@ -34,10 +26,10 @@ class GameState with ChangeNotifier {
   int targetColumn = 0;
   
   // 多球模式的狀態
-  List<int> startColumns = List.filled(5, 0);
-  List<int> endColumns = List.filled(5, 0);
-  List<double> ballPositionsX = List.filled(5, 0);
-  List<double> ballPositionsY = List.filled(5, 0);
+  List<int> startColumns = [];
+  List<int> endColumns = [];
+  List<double> ballPositionsX = [];
+  List<double> ballPositionsY = [];
   
   // 遊戲狀態
   GameStatus status = GameStatus.ready;
@@ -52,9 +44,43 @@ class GameState with ChangeNotifier {
   }
   
   // 初始化遊戲
-  GameState() {
+  GameState({
+    GameConfig? config,
+    GameLogic? logic,
+  }) : 
+    this.config = config ?? const GameConfig(),
+    this.logic = logic ?? GameLogic(config: config ?? const GameConfig()) {
+    // 初始化多球模式的陣列
+    startColumns = List.filled(this.config.multiBallCount, 0);
+    endColumns = List.filled(this.config.multiBallCount, 0);
+    ballPositionsX = List.filled(this.config.multiBallCount, 0);
+    ballPositionsY = List.filled(this.config.multiBallCount, 0);
+    
     // 隨機設定起點和終點
     resetGame();
+  }
+  
+  // 初始化單球模式的起點/終點與球座標
+  void initMatch() {
+    Map<String, int> points = logic.generateSingleBallPoints();
+    currentColumn = points['startColumn']!;
+    targetColumn = points['targetColumn']!;
+
+    // 重置球的位置到起點（只保存列號，實際渲染時會轉換為像素）
+    ballPositionX = currentColumn * 1.0;
+    ballPositionY = config.rows * 1.0;
+  }
+
+  // 初始化多球模式的起點/終點與球座標
+  void initMultiMatch() {
+    Map<String, List<int>> points = logic.generateMultiBallPoints();
+    startColumns = points['startColumns']!;
+    endColumns = points['endColumns']!;
+
+    for (int i = 0; i < config.multiBallCount; i++) {
+      ballPositionsX[i] = startColumns[i] * 1.0;
+      ballPositionsY[i] = config.rows * 1.0;
+    }
   }
   
   // 重置遊戲
@@ -65,31 +91,9 @@ class GameState with ChangeNotifier {
     BallAnimation.stopAnimation();
     
     if (_gameMode == GameMode.singleMatch) {
-      // 單球模式 - 隨機選擇起點和終點
-      Random random = Random();
-      currentColumn = random.nextInt(columns);
-      targetColumn = random.nextInt(columns);
-      
-      // 重置球的位置到起點
-      ballPositionX = currentColumn * 1.0; // 這裡只保存列號，實際渲染時會計算像素
-      ballPositionY = rows * 1.0; // 同上
+      initMatch();
     } else {
-      // 多球模式 - 為每個起點隨機指定終點
-      Random random = Random();
-      
-      // 生成 0-4 的隨機排列作為終點順序
-      List<int> targetOrder = List.generate(5, (index) => index);
-      targetOrder.shuffle(random);
-      
-      // 設置起點和終點
-      for (int i = 0; i < 5; i++) {
-        startColumns[i] = i;        // 起點固定為 0,1,2,3,4
-        endColumns[i] = targetOrder[i]; // 終點為打亂後的順序
-        
-        // 重置球的位置到起點
-        ballPositionsX[i] = i * 1.0; // 這裡只保存列號，實際渲染時會計算像素
-        ballPositionsY[i] = rows * 1.0; // 同上
-      }
+      initMultiMatch();
     }
     
     status = GameStatus.ready;
@@ -98,19 +102,14 @@ class GameState with ChangeNotifier {
   
   // 添加模塊
   bool addModule(GameModule module) {
-    // 檢查模塊是否在有效範圍內
-    if (module.position.row < 0 || 
-        module.position.row >= rows || 
-        module.position.column < 0 || 
-        module.position.column + module.width - 1 >= columns) {
+    // 使用GameLogic檢查模塊是否在有效範圍內
+    if (!logic.isModuleInValidRange(module)) {
       return false;
     }
     
-    // 檢查是否與現有模塊衝突
-    for (var existingModule in modules) {
-      if (module.intersectsWith(existingModule)) {
-        return false;
-      }
+    // 使用GameLogic檢查是否與現有模塊衝突
+    if (logic.hasModuleConflict(module, modules)) {
+      return false;
     }
     
     modules.add(module);
@@ -159,15 +158,8 @@ class GameState with ChangeNotifier {
         cellSize: cellSize,
         onComplete: () {
           // 檢查所有球是否都到達正確的終點
-          bool allCorrect = true;
           List<int> finalColumns = BallAnimation.getFinalColumns();
-          
-          for (int i = 0; i < 5; i++) {
-            if (finalColumns[i] != endColumns[i]) {
-              allCorrect = false;
-              break;
-            }
-          }
+          bool allCorrect = logic.areAllBallsReachedCorrectTarget(finalColumns, endColumns);
           
           status = allCorrect ? GameStatus.success : GameStatus.failure;
           notifyListeners();

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_module.dart';
+import '../utils/grid_mapper.dart';
+import '../themes/app_theme.dart';
 
 /// 單個模塊顯示元件
 class ModuleWidget extends StatelessWidget {
@@ -29,9 +31,12 @@ class ModuleWidget extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: _moduleColor,
-        borderRadius: BorderRadius.circular(4.0),
-        border: Border.all(color: Colors.black, width: 1.5),
+        color: AppTheme.getModuleColor(type, isPlaced: isPlaced),
+        borderRadius: BorderRadius.circular(AppTheme.kModuleCornerRadius),
+        border: Border.all(
+          color: AppTheme.kModuleBorder, 
+          width: AppTheme.kModuleBorderThickness,
+        ),
       ),
       child: child,
     );
@@ -45,7 +50,11 @@ class ModuleWidget extends StatelessWidget {
         return const Center(
           child: SizedBox(
             width: 50.0,
-            child: Divider(color: Colors.black, thickness: 3.0, height: 3.0),
+            child: Divider(
+              color: AppTheme.kModuleBorder, 
+              thickness: AppTheme.kModuleContentThickness, 
+              height: AppTheme.kModuleContentThickness,
+            ),
           ),
         );
       case ModuleType.bridge:
@@ -61,21 +70,19 @@ class ModuleWidget extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  /// 模塊顏色
-  Color get _moduleColor {
-    final base = (type == ModuleType.horizontal)
-        ? Colors.orange
-        : Colors.purple;
-    return base.withOpacity(isPlaced ? 0.8 : 0.6);
-  }
-
   /// 快捷生成可拖放版本
   static Widget draggable({
     required ModuleType type,
     required double cellSize,
   }) {
-    final moduleWidth = (type == ModuleType.horizontal) ? 2 : 3;
-    final w = moduleWidth * cellSize;
+    final gridMapper = GridMapper(
+      cellSize: cellSize,
+      // 這裡只是為了創建 GridMapper 實例，實際的行數列數並不影響模塊寬度計算
+      rows: 10,
+      columns: 10,
+    );
+
+    final w = gridMapper.getModuleWidth(type);
     final h = cellSize;
 
     Widget _build(bool semiTransparent) => ModuleWidget(
@@ -88,7 +95,10 @@ class ModuleWidget extends StatelessWidget {
     return Draggable<ModuleType>(
       data: type,
       feedback: _build(false),
-      childWhenDragging: Opacity(opacity: 0.3, child: _build(false)),
+      childWhenDragging: Opacity(
+        opacity: AppTheme.kDraggingOpacity, 
+        child: _build(false)
+      ),
       child: _build(false),
     );
   }
@@ -103,8 +113,8 @@ class BridgePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 3.0
+      ..color = AppTheme.kModuleBorder
+      ..strokeWidth = AppTheme.kModuleContentThickness
       ..style = PaintingStyle.stroke;
 
     final midY = size.height / 2;
