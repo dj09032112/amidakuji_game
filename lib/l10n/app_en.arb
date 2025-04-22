@@ -1,0 +1,37 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Amidakuji Game",
+
+  "resetGame": "Reset Game",
+
+  "startGame": "Start Game",
+
+  "gameInProgress": "Game In Progress",
+
+  "newGame": "New Game",
+
+  "gameMode": "Game Mode:",
+
+  "singleBallMode": "Single Ball",
+
+  "multiBallMode": "Multi Ball",
+
+  "singleBallSuccess": "Congratulations! The ball reached the destination!",
+
+  "multiBallSuccess": "Congratulations! All balls reached their correct destinations!",
+
+  "singleBallFailure": "Sorry! The ball didn't reach the correct destination!",
+
+  "multiBallFailure": "Sorry! Not all balls reached their correct destinations!",
+
+  "toolboxTitle": "Module Toolbox",
+
+  "horizontalModule": "Horizontal Line",
+
+  "bridgeModule": "Bridge Module",
+
+  "singleBallHint": "Tip: Drag modules from the toolbox to help the ball reach its destination",
+  
+  "multiBallHint": "Tip: Drag modules from the toolbox to help all balls reach their correct destinations"
+}

@@ -7,7 +7,7 @@ import 'models/board_state.dart';
 import 'models/ball_state.dart';
 import 'models/game_controller.dart';
 import 'screens/game_screen.dart';
-import 'l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'l10n/locale_provider.dart';
 
 void main() {
@@ -47,22 +47,10 @@ class MyApp extends StatelessWidget {
               visualDensity: VisualDensity.adaptivePlatformDensity,
             ),
             // 配置本地化
-            locale: localeProvider.locale,
+            locale: localeProvider.currentLocale,
             supportedLocales: AppLocalizations.supportedLocales,
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            home: Builder(
-              builder: (context) {
-                // 確保 AppLocalizations 已經加載
-                final AppLocalizations? localizations = AppLocalizations.of(context);
-                
-                return const GameScreen();
-              }
-            ),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            home: const GameScreen(),
             debugShowCheckedModeBanner: false,
           );
         }

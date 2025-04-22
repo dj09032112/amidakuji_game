@@ -1,23 +1,18 @@
 import 'package:flutter/material.dart';
-import 'app_localizations.dart';
 
-/// 語言提供者類，負責管理應用程序的語言狀態
+/// 語言提供者類，負責管理應用程式的語言狀態
 class LocaleProvider with ChangeNotifier {
-  // 當前語言
-  Locale _locale;
+  /// 當前語言（預設為繁體中文 zh_TW）
+  Locale _currentLocale = const Locale('zh', 'TW');
 
-  // 構造函數
-  LocaleProvider({Locale? locale}) : _locale = locale ?? AppLocalizations.supportedLocales.first;
+  /// 取得當前語言
+  Locale get currentLocale => _currentLocale;
 
-  // 獲取當前語言
-  Locale get locale => _locale;
-
-  // 設置語言
-  void setLocale(BuildContext context, Locale newLocale) {
-    if (_locale != newLocale) {
-      _locale = newLocale;
-      AppLocalizations.setLocale(context, newLocale);
+  /// 設定語言
+  void setLocale(Locale newLocale) {
+    if (_currentLocale != newLocale) {
+      _currentLocale = newLocale;
       notifyListeners();
     }
   }
-} 
+}

@@ -6,7 +6,7 @@ import '../models/game_controller.dart';
 import '../models/game_enums.dart';
 import '../widgets/game_board.dart';
 import '../widgets/tool_panel.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../l10n/locale_provider.dart';
 
 class GameScreen extends StatefulWidget {
@@ -71,36 +71,48 @@ class _GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   
   // 創建語言切換下拉選單
   Widget _buildLanguageDropdown(BuildContext context) {
-    final localeProvider = Provider.of<LocaleProvider>(context);
-    final currentLocale = localeProvider.locale;
-    
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: DropdownButton<Locale>(
-        value: currentLocale,
-        onChanged: (Locale? newLocale) {
-          if (newLocale != null) {
-            localeProvider.setLocale(context, newLocale);
-          }
-        },
-        items: AppLocalizations.supportedLocales.map((Locale locale) {
-          String languageText = '';
-          if (locale.languageCode == 'zh') {
-            languageText = '中文';
-          } else if (locale.languageCode == 'en') {
-            languageText = 'English';
-          }
-          
-          return DropdownMenuItem<Locale>(
+    final localeProvider = context.watch<LocaleProvider>();
+
+    return DropdownButton<Locale>(
+      value: localeProvider.currentLocale,
+      onChanged: (Locale? newLocale) {
+        if (newLocale != null) localeProvider.setLocale(newLocale);
+      },
+      items: const [
+        Locale('en'),
+        Locale('zh', 'TW'),
+      ].map((locale) => DropdownMenuItem<Locale>(
             value: locale,
-            child: Text(languageText),
-          );
-        }).toList(),
-        underline: Container(), // 隱藏下劃線
-        icon: const Icon(Icons.language, color: Colors.white),
-      ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.language, size: 20),
+                const SizedBox(width: 8),
+                Text(_localeName(locale)),
+              ],
+            ),
+          ))
+        .toList(),
+      underline: const SizedBox.shrink(),
+      icon: const Icon(Icons.arrow_drop_down),
     );
   }
+
+  // 語系名稱對照表（可擴充）
+  String _localeName(Locale locale) {
+    if (locale.languageCode == 'zh' && locale.countryCode == 'TW') {
+      return '繁體中文';
+    }
+    if (locale.languageCode == 'zh' && locale.countryCode == 'CN') {
+      return '简体中文';
+    }
+    if (locale.languageCode == 'en') {
+      return 'English';
+    }
+    return locale.toLanguageTag(); // fallback 顯示為 "en" 或 "zh-TW"
+  }
+
+
 
   // 創建固定高度的結果顯示區域
   Widget _buildResultDisplay(BuildContext context) {

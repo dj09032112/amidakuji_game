@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/game_module.dart';
 import '../themes/app_theme.dart';
-import '../l10n/app_localizations.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'module_widget.dart';
 
 class ToolPanel extends StatelessWidget {
